@@ -2,23 +2,11 @@ import backend/api
 import backend/context
 import backend/log
 import gleam/int
-import gleam/result
-import middle/endpoint
 import wisp
 
 pub fn handle_request(ctx: context.Context, req: wisp.Request) -> wisp.Response {
   use ctx, req <- middleware(ctx, req)
-
-  let response =
-    req
-    |> endpoint.parse()
-    |> result.map(api.api(ctx, _))
-
-  case response {
-    Ok(response) -> response
-    Error(endpoint.BadRequest) -> wisp.bad_request("Invalid Request")
-    Error(endpoint.NotFound) -> wisp.not_found()
-  }
+  api.api(ctx, req)
 }
 
 pub fn middleware(

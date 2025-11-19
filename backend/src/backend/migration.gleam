@@ -27,7 +27,9 @@ pub fn migrate(db: pog.Connection) -> Result(Nil, Nil) {
       })
     use _ <- result.try(result)
 
-    "UPDATE migration SET level = ?;"
+    io.println("MIGRATION INFO: updating migration level")
+
+    "UPDATE migration SET level = $1;"
     |> pog.query()
     |> pog.parameter(migrations |> list.length() |> pog.int())
     |> pog.execute(db)
@@ -38,7 +40,20 @@ pub fn migrate(db: pog.Connection) -> Result(Nil, Nil) {
   |> result.replace_error(Nil)
 }
 
-const migrations = [migration_0000]
+const migrations = [
+  migration_0000,
+  migration_0001,
+  migration_0002,
+  migration_0003,
+  migration_0004,
+  migration_0005,
+  migration_0006,
+  migration_0007,
+  migration_0008,
+  migration_0009,
+  migration_0010,
+  migration_0011,
+]
 
 fn format_pog_error(err: pog.QueryError) -> String {
   case err {
@@ -132,7 +147,7 @@ fn migration_0000(db: pog.Connection) -> Result(Nil, Nil) {
   let result =
     "
     CREATE TABLE migration (
-      level BIGINT NOT NULL,
+      level BIGINT NOT NULL
     );
     "
     |> pog.query()
@@ -148,4 +163,147 @@ fn migration_0000(db: pog.Connection) -> Result(Nil, Nil) {
   use _ <- result.try(result)
 
   Ok(Nil)
+}
+
+fn migration_0001(db: pog.Connection) -> Result(Nil, Nil) {
+  "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";"
+  |> pog.query()
+  |> pog.execute(db)
+  |> on_query_error()
+  |> result.replace(Nil)
+}
+
+fn migration_0002(db: pog.Connection) -> Result(Nil, Nil) {
+  "
+  CREATE TABLE artist (
+    id      UUID NOT NULL UNIQUE,
+    name    TEXT NOT NULL,
+
+    PRIMARY KEY(id)
+  );
+  "
+  |> pog.query()
+  |> pog.execute(db)
+  |> on_query_error()
+  |> result.replace(Nil)
+}
+
+fn migration_0003(db: pog.Connection) -> Result(Nil, Nil) {
+  "
+  CREATE TABLE tag (
+    id      UUID NOT NULL UNIQUE,
+    name    TEXT NOT NULL,
+
+    PRIMARY KEY(id)
+  );
+  "
+  |> pog.query()
+  |> pog.execute(db)
+  |> on_query_error()
+  |> result.replace(Nil)
+}
+
+fn migration_0004(db: pog.Connection) -> Result(Nil, Nil) {
+  "
+  CREATE TABLE song (
+    id          UUID NOT NULL UNIQUE,
+    name        TEXT NOT NULL,
+    file_name   TEXT NOT NULL,
+
+    PRIMARY KEY(id)
+  );
+  "
+  |> pog.query()
+  |> pog.execute(db)
+  |> on_query_error()
+  |> result.replace(Nil)
+}
+
+fn migration_0005(db: pog.Connection) -> Result(Nil, Nil) {
+  "
+  CREATE TABLE album (
+    id      UUID NOT NULL UNIQUE,
+    name    TEXT NOT NULL,
+
+    PRIMARY KEY(id)
+  );
+  "
+  |> pog.query()
+  |> pog.execute(db)
+  |> on_query_error()
+  |> result.replace(Nil)
+}
+
+fn migration_0006(db: pog.Connection) -> Result(Nil, Nil) {
+  "
+  CREATE TABLE song_tag (
+    song_id     UUID REFERENCES song(id) ON DELETE CASCADE,
+    tag_id      UUID REFERENCES tag(id) ON DELETE CASCADE,
+    PRIMARY KEY (song_id, tag_id)
+  );
+  "
+  |> pog.query()
+  |> pog.execute(db)
+  |> on_query_error()
+  |> result.replace(Nil)
+}
+
+fn migration_0007(db: pog.Connection) -> Result(Nil, Nil) {
+  "
+  CREATE TABLE album_song (
+    album_id UUID REFERENCES album(id) ON DELETE CASCADE,
+    song_id UUID REFERENCES song(id) ON DELETE CASCADE
+  );
+  "
+  |> pog.query()
+  |> pog.execute(db)
+  |> on_query_error()
+  |> result.replace(Nil)
+}
+
+fn migration_0008(db: pog.Connection) -> Result(Nil, Nil) {
+  "
+  CREATE TABLE album_tag (
+    album_id UUID REFERENCES album(id) ON DELETE CASCADE,
+    tag_id UUID REFERENCES tag(id) ON DELETE CASCADE
+  );
+  "
+  |> pog.query()
+  |> pog.execute(db)
+  |> on_query_error()
+  |> result.replace(Nil)
+}
+
+fn migration_0009(db: pog.Connection) -> Result(Nil, Nil) {
+  "
+  CREATE TABLE song_artist (
+    song_id UUID REFERENCES song(id) ON DELETE CASCADE,
+    artist_id UUID REFERENCES artist(id) ON DELETE CASCADE
+  );
+  "
+  |> pog.query()
+  |> pog.execute(db)
+  |> on_query_error()
+  |> result.replace(Nil)
+}
+
+fn migration_0010(db: pog.Connection) -> Result(Nil, Nil) {
+  "
+  CREATE TABLE album_artist (
+    album_id UUID REFERENCES album(id) ON DELETE CASCADE,
+    artist_id UUID REFERENCES artist(id) ON DELETE CASCADE
+  );
+  "
+  |> pog.query()
+  |> pog.execute(db)
+  |> on_query_error()
+  |> result.replace(Nil)
+}
+
+fn migration_0011(db: pog.Connection) -> Result(Nil, Nil) {
+  "ALTER TABLE album_song ADD COLUMN ordering INTEGER NOT NULL"
+  |> pog.query()
+  |> pog.execute(db)
+  |> on_query_error()
+  |> result.replace(Nil)
 }

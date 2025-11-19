@@ -4,18 +4,33 @@ import gleam/io
 import gleam/string
 import youid/uuid
 
+/// logs an info message
+///
+/// # Example
+/// ```gleam
+/// log.info(ctx, "Hello World")
+/// ```
 pub fn info(ctx: context.Context, message: String) -> Nil {
   format(ctx, "INFO", message)
 }
 
+/// logs an error message
+/// 
+/// # Example
+/// ```gleam
+/// log.error(ctx, "error message")
+/// ```
 pub fn error(ctx: context.Context, message: String) -> Nil {
   format(ctx, "ERROR", message)
 }
 
+/// logs a warning message
 pub fn warn(ctx: context.Context, message: String) -> Nil {
   format(ctx, "WARN", message)
 }
 
+/// logs a info message if `result` contains an `Ok` value otherwise nothing
+/// gets logged
 pub fn on_ok(result: Result(a, b), ctx: context.Context, message: String) {
   case result {
     Error(_) -> Nil
