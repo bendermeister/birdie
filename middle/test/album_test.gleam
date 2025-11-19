@@ -3,15 +3,16 @@ import middle/album
 import middle/artist
 import middle/song
 import middle/tag
+import youid/uuid
 
 pub fn to_from_json_test() {
   let album =
     album.Album(
-      id: album.Id(1),
+      id: album.Id(uuid.v4()),
       name: "the album",
-      artists: [artist.Id(1), artist.Id(2)],
-      songs: [song.Id(1), song.Id(2)],
-      tags: [tag.Id(69), tag.Id(2)],
+      artists: [artist.Id(uuid.v4()), artist.Id(uuid.v4())],
+      songs: [song.Id(uuid.v4()), song.Id(uuid.v4())],
+      tags: [tag.Id(uuid.v4()), tag.Id(uuid.v4())],
     )
 
   let assert Ok(out) =

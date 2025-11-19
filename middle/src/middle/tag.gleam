@@ -1,8 +1,10 @@
 import gleam/dynamic/decode
 import gleam/json
+import gleam/result
+import youid/uuid
 
 pub type Id {
-  Id(inner: Int)
+  Id(inner: uuid.Uuid)
 }
 
 pub type Tag {
@@ -10,8 +12,12 @@ pub type Tag {
 }
 
 pub fn id_decoder() -> decode.Decoder(Id) {
-  use id <- decode.then(decode.int)
-  id |> Id |> decode.success
+  use id <- decode.then(decode.string)
+  id
+  |> uuid.from_string()
+  |> result.map(Id)
+  |> result.map(decode.success)
+  |> result.unwrap(decode.failure(Id(uuid.v4()), "Id"))
 }
 
 pub fn json_decoder() -> decode.Decoder(Tag) {
@@ -22,7 +28,7 @@ pub fn json_decoder() -> decode.Decoder(Tag) {
 }
 
 pub fn id_to_json(id: Id) {
-  id.inner |> json.int
+  id.inner |> uuid.to_string |> json.string()
 }
 
 pub fn to_json(tag: Tag) {

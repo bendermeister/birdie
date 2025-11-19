@@ -1,8 +1,9 @@
 import gleam/json
 import middle/artist
+import youid/uuid
 
 pub fn to_from_json_test() {
-  let artist = artist.Artist(artist.Id(1), "KIZ")
+  let artist = artist.Artist(artist.Id(uuid.v4()), "KIZ")
   let assert Ok(out) =
     artist
     |> artist.to_json()

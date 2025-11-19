@@ -2,14 +2,16 @@ import gleam/json
 import middle/artist
 import middle/song
 import middle/tag
+import youid/uuid
 
 pub fn to_from_json_test() {
   let song =
     song.Song(
-      song.Id(1),
+      song.Id(uuid.v4()),
       "This is a Song",
-      tags: [tag.Id(1), tag.Id(2)],
-      artists: [artist.Id(2), artist.Id(4)],
+      tags: [tag.Id(uuid.v4()), tag.Id(uuid.v4())],
+      artists: [artist.Id(uuid.v4()), artist.Id(uuid.v4())],
+      file_name: "asdfsadf.opus",
     )
   let assert Ok(out) =
     song

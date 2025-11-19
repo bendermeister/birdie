@@ -6,16 +6,15 @@ import middle/query
 import middle/song
 import middle/tag
 import wisp
+import youid/uuid
 
 pub type Endpoint {
   Query(page: Int, query: query.Query)
 
   TagGet
-  TagCreate
   TagDelete(id: tag.Id)
   TagUpdate(tag: tag.Tag)
 
-  SongCreate
   SongDelete(id: song.Id)
   SongUpdate(song: song.Song)
 }
@@ -40,12 +39,10 @@ pub fn parse(request: wisp.Request) -> Result(Endpoint, Error) {
 
     // Tag Endpoints
     ["api", "tag", "get"] -> TagGet |> Ok
-    ["api", "tag", "create"] -> TagCreate |> Ok
     ["api", "tag", "delete", id] -> parse_tag_delete(id)
     ["api", "tag", "update"] -> parse_tag_update(request)
 
     // Song Endpoints
-    ["api", "song", "create"] -> SongCreate |> Ok
     ["api", "song", "delete", id] -> parse_song_delete(id)
     ["api", "song", "update"] -> parse_song_update(request)
 
@@ -63,8 +60,7 @@ pub fn to_request(endpoint: Endpoint) -> Request {
     }
 
     // Tag Endpoints
-    TagCreate -> "/api/tag/create" |> Get
-    TagDelete(id:) -> { "/api/tag/delete/" <> int.to_string(id.inner) } |> Get
+    TagDelete(id:) -> { "/api/tag/delete/" <> uuid.to_string(id.inner) } |> Get
     TagGet -> "/api/tag/get" |> Get
     TagUpdate(tag:) -> {
       let url = "/api/tag/update"
@@ -73,8 +69,8 @@ pub fn to_request(endpoint: Endpoint) -> Request {
     }
 
     // Song Endpoints
-    SongCreate -> "/api/song/create" |> Get
-    SongDelete(id:) -> { "/api/song/delete/" <> int.to_string(id.inner) } |> Get
+    SongDelete(id:) ->
+      { "/api/song/delete/" <> uuid.to_string(id.inner) } |> Get
     SongUpdate(song:) -> {
       let url = "/api/song/update"
       let body = song |> song.to_json()
@@ -110,7 +106,7 @@ fn parse_query(request: wisp.Request, page: String) -> Result(Endpoint, Error) {
 
 fn parse_tag_delete(id: String) -> Result(Endpoint, Error) {
   id
-  |> int.parse()
+  |> uuid.from_string()
   |> result.map(tag.Id)
   |> result.map(TagDelete)
   |> result.replace_error(BadRequest)
@@ -130,7 +126,7 @@ fn parse_song_update(request: wisp.Request) -> Result(Endpoint, Error) {
 
 fn parse_song_delete(id: String) -> Result(Endpoint, Error) {
   id
-  |> int.parse()
+  |> uuid.from_string()
   |> result.map(song.Id)
   |> result.map(SongDelete)
   |> result.replace_error(BadRequest)

@@ -1,8 +1,9 @@
 import gleam/json
 import middle/tag
+import youid/uuid
 
 pub fn to_from_json_test() {
-  let tag = tag.Tag(tag.Id(1), "rock")
+  let tag = tag.Tag(tag.Id(uuid.v4()), "rock")
 
   let assert Ok(out) =
     tag
