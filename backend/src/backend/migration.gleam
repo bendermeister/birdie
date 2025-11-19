@@ -252,7 +252,8 @@ fn migration_0007(db: pog.Connection) -> Result(Nil, Nil) {
   "
   CREATE TABLE album_song (
     album_id UUID REFERENCES album(id) ON DELETE CASCADE,
-    song_id UUID REFERENCES song(id) ON DELETE CASCADE
+    song_id UUID REFERENCES song(id) ON DELETE CASCADE,
+    PRIMARY KEY (album_id, song_id)
   );
   "
   |> pog.query()
@@ -265,7 +266,9 @@ fn migration_0008(db: pog.Connection) -> Result(Nil, Nil) {
   "
   CREATE TABLE album_tag (
     album_id UUID REFERENCES album(id) ON DELETE CASCADE,
-    tag_id UUID REFERENCES tag(id) ON DELETE CASCADE
+    tag_id UUID REFERENCES tag(id) ON DELETE CASCADE,
+
+    PRIMARY KEY(album_id, tag_id)
   );
   "
   |> pog.query()
@@ -278,7 +281,9 @@ fn migration_0009(db: pog.Connection) -> Result(Nil, Nil) {
   "
   CREATE TABLE song_artist (
     song_id UUID REFERENCES song(id) ON DELETE CASCADE,
-    artist_id UUID REFERENCES artist(id) ON DELETE CASCADE
+    artist_id UUID REFERENCES artist(id) ON DELETE CASCADE,
+
+    PRIMARY KEY(song_id, artist_id)
   );
   "
   |> pog.query()
@@ -291,7 +296,9 @@ fn migration_0010(db: pog.Connection) -> Result(Nil, Nil) {
   "
   CREATE TABLE album_artist (
     album_id UUID REFERENCES album(id) ON DELETE CASCADE,
-    artist_id UUID REFERENCES artist(id) ON DELETE CASCADE
+    artist_id UUID REFERENCES artist(id) ON DELETE CASCADE,
+
+    PRIMARY KEY (album_id, artist_id)
   );
   "
   |> pog.query()
