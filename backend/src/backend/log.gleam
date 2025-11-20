@@ -2,7 +2,6 @@ import backend/context
 import birl
 import gleam/io
 import gleam/string
-import youid/uuid
 
 /// logs an info message
 ///
@@ -65,7 +64,7 @@ pub fn on_errorf(
 
 pub fn format(ctx: context.Context, level: String, message: String) -> Nil {
   let now = birl.now() |> birl.to_iso8601() |> string.trim()
-  let id = ctx.id |> uuid.to_string() |> string.trim()
+  let id = ctx.id
   let message = "[" <> level <> " " <> now <> " " <> id <> "]: " <> message
   io.println(message)
 }

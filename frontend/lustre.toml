@@ -1,0 +1,4 @@
+[tools.lustre.dev]
+host = "localhost"
+port = 1234
+proxy = { from = "/api", to = "http://localhost:8080/api" }

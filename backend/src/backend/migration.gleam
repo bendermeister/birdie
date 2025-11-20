@@ -1,18 +1,20 @@
+import backend/context
+import backend/db
+import backend/log
 import gleam/bool
 import gleam/dynamic/decode
 import gleam/int
-import gleam/io
 import gleam/list
 import gleam/result
 import pog
 
 pub fn migrate(db: pog.Connection) -> Result(Nil, Nil) {
-  let level =
-    get_level(db)
-    |> on_error("could not get migration level")
+  let ctx = context.Context(id: "MIGRATION", db:)
+  let level = get_level(ctx)
   use level <- result.try(level)
 
   pog.transaction(db, fn(db) {
+    let ctx = context.Context(id: "MIGRATION TRANSACTION", db:)
     let result =
       migrations
       |> list.drop(level)
@@ -20,22 +22,19 @@ pub fn migrate(db: pog.Connection) -> Result(Nil, Nil) {
         acc
         |> result.try(fn(_) {
           let index = int.to_string(index + level)
-          io.println("MIGRATION INFO: running migration: " <> index)
-          migration(db)
-          |> on_error("error while running migration: " <> index)
+          log.info(ctx, "running migration: " <> index)
+          migration(ctx)
+          |> log.on_error(ctx, "error while running migration: " <> index)
         })
       })
     use _ <- result.try(result)
 
-    io.println("MIGRATION INFO: updating migration level")
-
     "UPDATE migration SET level = $1;"
     |> pog.query()
     |> pog.parameter(migrations |> list.length() |> pog.int())
-    |> pog.execute(db)
-    |> on_query_error()
+    |> db.execute(ctx)
   })
-  |> on_error("error while running migrations changes are reverted")
+  |> log.on_errorf(ctx, db.transaction_error_format)
   |> result.replace(Nil)
   |> result.replace_error(Nil)
 }
@@ -51,99 +50,27 @@ const migrations = [
   migration_0007,
   migration_0008,
   migration_0009,
-  migration_0010,
-  migration_0011,
 ]
 
-fn format_pog_error(err: pog.QueryError) -> String {
-  case err {
-    pog.ConnectionUnavailable -> "connection unavailable"
-    pog.ConstraintViolated(message:, constraint:, detail:) ->
-      "constraint violated: message: {"
-      <> message
-      <> "}, constraint: {"
-      <> constraint
-      <> "}, detail: {"
-      <> detail
-      <> "}"
-    pog.PostgresqlError(code:, name:, message:) ->
-      "postgresql error: code: {"
-      <> code
-      <> "}, name: {"
-      <> name
-      <> "}, message: {"
-      <> message
-      <> "}"
-    pog.QueryTimeout -> "query timeout"
-    pog.UnexpectedArgumentCount(expected:, got:) ->
-      "unexpected argument count: expected: "
-      <> int.to_string(expected)
-      <> ", got: "
-      <> int.to_string(got)
-    pog.UnexpectedArgumentType(expected:, got:) ->
-      "unexpected argument type: expected: " <> expected <> " got: " <> got
-    pog.UnexpectedResultType(_) -> "unexpected result type -> decoding error"
-  }
-}
-
-fn on_query_error(result: Result(a, pog.QueryError)) -> Result(a, Nil) {
-  result
-  |> result.map_error(fn(err) {
-    let message = err |> format_pog_error()
-    io.println_error("MIGRATION ERROR: " <> message)
-  })
-}
-
-fn on_error(result: Result(a, b), message) -> Result(a, b) {
-  case result {
-    Error(_) -> io.println_error("MIGRATION ERROR: " <> message)
-    Ok(_) -> Nil
-  }
-  result
-}
-
-pub fn get_level(db: pog.Connection) -> Result(Int, Nil) {
+pub fn get_level(ctx: context.Context) -> Result(Int, Nil) {
   // check if migration table even exists
-
-  let decoder = {
-    use exists <- decode.field(0, decode.bool)
-    exists |> decode.success
-  }
 
   let exists =
     "SELECT EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'migration');"
     |> pog.query()
-    |> pog.returning(decoder)
-    |> pog.execute(db)
-    |> on_query_error()
-  use exists <- result.try(exists)
-
-  let exists =
-    exists.rows
-    |> list.first()
-    |> on_error("migration table exists query returnend no rows")
+    |> pog.returning(decode.field(0, decode.bool, decode.success))
+    |> db.fetch_one(ctx)
   use exists <- result.try(exists)
 
   use <- bool.guard(when: !exists, return: Ok(0))
 
-  let decoder = {
-    use level <- decode.field(0, decode.int)
-    level |> decode.success
-  }
-
-  let level =
-    "SELECT level FROM migration LIMIT 1;"
-    |> pog.query()
-    |> pog.returning(decoder)
-    |> pog.execute(db)
-    |> on_query_error()
-  use level <- result.try(level)
-  level.rows
-  |> list.first()
-  |> on_error("migration level query returnend no rows")
+  "SELECT level FROM migration LIMIT 1;"
+  |> pog.query()
+  |> pog.returning(decode.field(0, decode.int, decode.success))
+  |> db.fetch_one(ctx)
 }
 
-fn migration_0000(db: pog.Connection) -> Result(Nil, Nil) {
+fn migration_0000(ctx: context.Context) -> Result(Nil, Nil) {
   let result =
     "
     CREATE TABLE migration (
@@ -151,166 +78,131 @@ fn migration_0000(db: pog.Connection) -> Result(Nil, Nil) {
     );
     "
     |> pog.query()
-    |> pog.execute(db)
-    |> on_query_error()
+    |> db.execute(ctx)
   use _ <- result.try(result)
 
   let result =
     "INSERT INTO migration (level) VALUES(1);"
     |> pog.query()
-    |> pog.execute(db)
-    |> on_query_error()
+    |> db.execute(ctx)
   use _ <- result.try(result)
 
   Ok(Nil)
 }
 
-fn migration_0001(db: pog.Connection) -> Result(Nil, Nil) {
-  "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";"
-  |> pog.query()
-  |> pog.execute(db)
-  |> on_query_error()
-  |> result.replace(Nil)
-}
-
-fn migration_0002(db: pog.Connection) -> Result(Nil, Nil) {
+fn migration_0001(ctx: context.Context) -> Result(Nil, Nil) {
   "
   CREATE TABLE artist (
-    id      UUID NOT NULL UNIQUE,
-    name    TEXT NOT NULL,
+    id      BIGINT  NOT NULL UNIQUE,
+    name    TEXT    NOT NULL,
 
     PRIMARY KEY(id)
   );
   "
   |> pog.query()
-  |> pog.execute(db)
-  |> on_query_error()
-  |> result.replace(Nil)
+  |> db.execute(ctx)
 }
 
-fn migration_0003(db: pog.Connection) -> Result(Nil, Nil) {
+fn migration_0002(ctx: context.Context) -> Result(Nil, Nil) {
   "
   CREATE TABLE tag (
-    id      UUID NOT NULL UNIQUE,
-    name    TEXT NOT NULL,
+    id      BIGINT  NOT NULL UNIQUE,
+    name    TEXT    NOT NULL,
 
     PRIMARY KEY(id)
   );
   "
   |> pog.query()
-  |> pog.execute(db)
-  |> on_query_error()
-  |> result.replace(Nil)
+  |> db.execute(ctx)
 }
 
-fn migration_0004(db: pog.Connection) -> Result(Nil, Nil) {
+fn migration_0003(ctx: context.Context) -> Result(Nil, Nil) {
   "
   CREATE TABLE song (
-    id          UUID NOT NULL UNIQUE,
-    name        TEXT NOT NULL,
-    file_name   TEXT NOT NULL,
+    id          BIGINT  NOT NULL UNIQUE,
+    name        TEXT    NOT NULL,
+    file_name   TEXT    NOT NULL,
 
     PRIMARY KEY(id)
   );
   "
   |> pog.query()
-  |> pog.execute(db)
-  |> on_query_error()
-  |> result.replace(Nil)
+  |> db.execute(ctx)
 }
 
-fn migration_0005(db: pog.Connection) -> Result(Nil, Nil) {
+fn migration_0004(ctx: context.Context) -> Result(Nil, Nil) {
   "
   CREATE TABLE album (
-    id      UUID NOT NULL UNIQUE,
+    id      BIGINT NOT NULL UNIQUE,
     name    TEXT NOT NULL,
 
     PRIMARY KEY(id)
   );
   "
   |> pog.query()
-  |> pog.execute(db)
-  |> on_query_error()
-  |> result.replace(Nil)
+  |> db.execute(ctx)
 }
 
-fn migration_0006(db: pog.Connection) -> Result(Nil, Nil) {
+fn migration_0005(ctx: context.Context) -> Result(Nil, Nil) {
   "
   CREATE TABLE song_tag (
-    song_id     UUID REFERENCES song(id) ON DELETE CASCADE,
-    tag_id      UUID REFERENCES tag(id) ON DELETE CASCADE,
+    song_id     BIGINT REFERENCES song(id) ON DELETE CASCADE,
+    tag_id      BIGINT REFERENCES tag(id) ON DELETE CASCADE,
     PRIMARY KEY (song_id, tag_id)
   );
   "
   |> pog.query()
-  |> pog.execute(db)
-  |> on_query_error()
-  |> result.replace(Nil)
+  |> db.execute(ctx)
 }
 
-fn migration_0007(db: pog.Connection) -> Result(Nil, Nil) {
+fn migration_0006(ctx: context.Context) -> Result(Nil, Nil) {
   "
   CREATE TABLE album_song (
-    album_id UUID REFERENCES album(id) ON DELETE CASCADE,
-    song_id UUID REFERENCES song(id) ON DELETE CASCADE,
+    album_id BIGINT REFERENCES album(id) ON DELETE CASCADE,
+    song_id  BIGINT REFERENCES song(id)  ON DELETE CASCADE,
+    ordering BIGINT NOT NULL,
     PRIMARY KEY (album_id, song_id)
   );
   "
   |> pog.query()
-  |> pog.execute(db)
-  |> on_query_error()
-  |> result.replace(Nil)
+  |> db.execute(ctx)
 }
 
-fn migration_0008(db: pog.Connection) -> Result(Nil, Nil) {
+fn migration_0007(ctx: context.Context) -> Result(Nil, Nil) {
   "
   CREATE TABLE album_tag (
-    album_id UUID REFERENCES album(id) ON DELETE CASCADE,
-    tag_id UUID REFERENCES tag(id) ON DELETE CASCADE,
+    album_id    BIGINT REFERENCES album(id) ON DELETE CASCADE,
+    tag_id      BIGINT REFERENCES tag(id) ON DELETE CASCADE,
 
     PRIMARY KEY(album_id, tag_id)
   );
   "
   |> pog.query()
-  |> pog.execute(db)
-  |> on_query_error()
-  |> result.replace(Nil)
+  |> db.execute(ctx)
 }
 
-fn migration_0009(db: pog.Connection) -> Result(Nil, Nil) {
+fn migration_0008(ctx: context.Context) -> Result(Nil, Nil) {
   "
   CREATE TABLE song_artist (
-    song_id UUID REFERENCES song(id) ON DELETE CASCADE,
-    artist_id UUID REFERENCES artist(id) ON DELETE CASCADE,
+    song_id     BIGINT REFERENCES song(id) ON DELETE CASCADE,
+    artist_id   BIGINT REFERENCES artist(id) ON DELETE CASCADE,
 
-    PRIMARY KEY(song_id, artist_id)
-  );
+    PRIMARY KEY (song_id, artist_id)
+  )
   "
   |> pog.query()
-  |> pog.execute(db)
-  |> on_query_error()
-  |> result.replace(Nil)
+  |> db.execute(ctx)
 }
 
-fn migration_0010(db: pog.Connection) -> Result(Nil, Nil) {
+fn migration_0009(ctx: context.Context) -> Result(Nil, Nil) {
   "
   CREATE TABLE album_artist (
-    album_id UUID REFERENCES album(id) ON DELETE CASCADE,
-    artist_id UUID REFERENCES artist(id) ON DELETE CASCADE,
+    album_id BIGINT REFERENCES album(id) ON DELETE CASCADE,
+    artist_id BIGINT REFERENCES artist(id) ON DELETE CASCADE,
 
     PRIMARY KEY (album_id, artist_id)
   );
   "
   |> pog.query()
-  |> pog.execute(db)
-  |> on_query_error()
-  |> result.replace(Nil)
-}
-
-fn migration_0011(db: pog.Connection) -> Result(Nil, Nil) {
-  "ALTER TABLE album_song ADD COLUMN ordering INTEGER NOT NULL"
-  |> pog.query()
-  |> pog.execute(db)
-  |> on_query_error()
-  |> result.replace(Nil)
+  |> db.execute(ctx)
 }

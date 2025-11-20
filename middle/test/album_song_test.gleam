@@ -2,13 +2,12 @@ import gleam/json
 import middle/album
 import middle/album_song
 import middle/song
-import youid/uuid
 
 pub fn to_from_json_test() {
   let x =
     album_song.AlbumSong(
-      album_id: album.Id(uuid.v4()),
-      song_id: song.Id(uuid.v4()),
+      album_id: album.Id(1),
+      song_id: song.Id(2),
       ordering: 1,
     )
 

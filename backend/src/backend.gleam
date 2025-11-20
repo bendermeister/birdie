@@ -10,7 +10,6 @@ import mist
 import pog
 import wisp
 import wisp/wisp_mist
-import youid/uuid
 
 pub fn start_application_supervisor(
   name pool_name: process.Name(pog.Message),
@@ -82,7 +81,7 @@ pub fn main() -> Nil {
   // - a context gets created with a new UUID and a database connection
   let request_handler = fn(req: wisp.Request) {
     let db = pog.named_connection(db)
-    let ctx = context.Context(id: uuid.v4(), db:)
+    let ctx = context.Context(id: wisp.random_string(16), db:)
     web.handle_request(ctx, req)
   }
 

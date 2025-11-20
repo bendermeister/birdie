@@ -1,9 +1,8 @@
 import gleam/json
 import middle/album
-import youid/uuid
 
 pub fn to_from_json_test() {
-  let album = album.Album(id: album.Id(uuid.v4()), name: "the album")
+  let album = album.Album(id: album.Id(1), name: "the album")
 
   let assert Ok(out) =
     album
