@@ -1,3 +1,4 @@
+import frontend/route
 import middle/album
 import middle/album_artist
 import middle/album_song
@@ -19,4 +20,9 @@ pub type Message {
   ClientReceivedAlbumTag(List(album_tag.AlbumTag))
   ClientReceivedAlbumSong(List(album_song.AlbumSong))
   ClientReceivedAlbumArtist(List(album_artist.AlbumArtist))
+
+  ClientLoadedRoute(route.Route)
+  UserChangeRoute(route.Route)
+
+  Tick
 }

@@ -1,17 +1,23 @@
 import frontend/message
 import frontend/model
+import frontend/route
+import gleam/dict
 import gleam/dynamic/decode
 import gleam/io
+import gleam/option
 import gleam/result
 import lustre/effect
 import middle/album
 import middle/album_artist
 import middle/album_song
 import middle/album_tag
+import middle/query
 import middle/song
 import middle/song_artist
 import middle/song_tag
 import middle/tag
+import modem
+import plinth/javascript/global as js
 import rsvp
 
 pub fn init(_args) -> #(model.Model, effect.Effect(message.Message)) {
@@ -88,20 +94,35 @@ pub fn init(_args) -> #(model.Model, effect.Effect(message.Message)) {
         "album artists could not be loaded",
         decode.list(album_artist.json_decoder()),
       ),
+      effect.from(fn(dispatch) {
+        let _ = js.set_timeout(1000, fn() { dispatch(message.Tick) })
+        Nil
+      }),
+
+      modem.init(fn(uri) { uri |> route.from_uri |> message.ClientLoadedRoute }),
     ]
     |> effect.batch()
 
+  let route =
+    modem.initial_uri()
+    |> result.map(route.from_uri)
+    |> result.unwrap(route.Home)
+
   let model =
     model.Model(
-      tags: [],
-      songs: [],
-      artists: [],
-      albums: [],
-      song_tags: [],
-      song_artists: [],
-      album_tags: [],
-      album_songs: [],
-      album_artists: [],
+      content: [],
+      song: dict.new(),
+      player: option.None,
+      tag: dict.new(),
+      album: dict.new(),
+      artist: dict.new(),
+      song_tag: dict.new(),
+      album_song: dict.new(),
+      album_tag: dict.new(),
+      song_artist: dict.new(),
+      album_artist: dict.new(),
+      query: query.Query(query: []),
+      route:,
     )
 
   #(model, effect)
