@@ -1,13 +1,20 @@
 import frontend/icon
 import frontend/message
+import frontend/model
 import frontend/route
+import gleam/dict
 import gleam/list
+import gleam/option
 import gleam/pair
+import gleam/result
+import gleam/string
 import lustre/attribute as attr
 import lustre/element
 import lustre/element/html
 import lustre/event
+import middle/album
 import middle/query
+import middle/song
 
 pub fn birdie_logo() {
   html.div(
@@ -18,6 +25,88 @@ pub fn birdie_logo() {
       event.on_click(message.UserChangeRoute(route.Home)),
     ],
     [element.text("birdie")],
+  )
+}
+
+pub fn album(album: album.Album, model: model.Model) {
+  let artist =
+    album.id
+    |> dict.get(model.album_artist, _)
+    |> result.unwrap([])
+    |> list.map(fn(x) { x.artist_id })
+    |> list.map(dict.get(model.artist, _))
+    |> result.partition
+    |> pair.first
+    |> list.map(fn(x) { x.name })
+    |> string.join(", ")
+    |> string.to_option()
+    |> option.unwrap("<unknown>")
+
+  let title = album.name <> " -- " <> artist
+
+  html.div(
+    [
+      attr.class("w-full px-5 py-2 rounded-lg bg-base"),
+      attr.class("flex flex-row justify-between items-center"),
+    ],
+    [
+      html.div([attr.class("flex flex-row justify-start items-center gap-2")], [
+        icon.folder([attr.class("size-6 text-iris")]),
+        html.div([attr.class("truncate")], [title |> html.text]),
+      ]),
+      html.div([attr.class("flex flex-row justify-end items-center gap-2")], [
+        icon.play([attr.class("hover:cursor-pointer size-6 text-foam")]),
+        icon.plus([attr.class("hover:cursor-pointer size-6 text-rose")]),
+        icon.ellipsis([
+          attr.class("hover:cursor-pointer size-6 text-muted"),
+          album.id
+            |> route.AlbumEdit
+            |> message.UserChangeRoute
+            |> event.on_click(),
+        ]),
+      ]),
+    ],
+  )
+}
+
+pub fn song(song: song.Song, model: model.Model) {
+  let artist =
+    model.song_artist
+    |> dict.get(song.id)
+    |> result.unwrap([])
+    |> list.map(fn(x) { x.artist_id |> dict.get(model.artist, _) })
+    |> result.partition()
+    |> pair.first()
+    |> list.unique()
+    |> list.map(fn(x) { x.name })
+    |> string.join(", ")
+    |> string.to_option()
+    |> option.unwrap("<unknown>")
+
+  let title = song.name <> " -- " <> artist
+
+  html.div(
+    [
+      attr.class("w-full px-5 py-2 rounded-lg bg-base"),
+      attr.class("flex flex-row justify-between items-center"),
+    ],
+    [
+      html.div([attr.class("flex flex-row justify-start items-center gap-2")], [
+        icon.music_note([attr.class("size-6 text-iris")]),
+        html.div([attr.class("truncate")], [title |> html.text]),
+      ]),
+      html.div([attr.class("flex flex-row justify-end items-center gap-2")], [
+        icon.play([attr.class("hover:cursor-pointer size-6 text-foam")]),
+        icon.plus([attr.class("hover:cursor-pointer size-6 text-rose")]),
+        icon.ellipsis([
+          attr.class("hover:cursor-pointer size-6 text-muted"),
+          song.id
+            |> route.MusicEdit
+            |> message.UserChangeRoute
+            |> event.on_click(),
+        ]),
+      ]),
+    ],
   )
 }
 
