@@ -68,6 +68,7 @@ pub fn content_sort(model: Model) -> List(Content) {
       |> list.filter(fn(tag) { string.contains(tag.name, query) })
       |> list.map(fn(x) { x.id })
     })
+    |> list.unique()
 
   let matching_artists =
     model.query.query
@@ -83,6 +84,7 @@ pub fn content_sort(model: Model) -> List(Content) {
       |> list.filter(fn(x) { string.contains(x.name, query) })
       |> list.map(fn(x) { x.id })
     })
+    |> list.unique()
 
   let matching_titles =
     model.query.query
@@ -95,10 +97,12 @@ pub fn content_sort(model: Model) -> List(Content) {
     })
 
   model.content
-  |> list.filter_map(fn(x) {
+  |> list.map(fn(x) {
     let #(title, artist, tag) = case x {
       Album(id) -> {
-        let title = dict.get(model.album, id) |> result.map(fn(x) { x.name })
+        let title =
+          dict.get(model.album, id)
+          |> result.map(fn(x) { x.name })
         let artist =
           dict.get(model.album_artist, id)
           |> result.map(list.map(_, fn(x) { x.artist_id }))
@@ -120,9 +124,9 @@ pub fn content_sort(model: Model) -> List(Content) {
         #(title, artist, tag)
       }
     }
-    use title <- result.try(title)
-    use artist <- result.try(artist)
-    use tag <- result.try(tag)
+    let title = title |> result.unwrap("")
+    let artist = artist |> result.unwrap([])
+    let tag = tag |> result.unwrap([])
 
     let tag_count =
       tag
@@ -138,7 +142,6 @@ pub fn content_sort(model: Model) -> List(Content) {
     let ordering = tag_count + artist_count + title_count
 
     #(ordering, x)
-    |> Ok
   })
   |> list.sort(fn(a, b) { int.compare(a.0, b.0) })
   |> list.map(pair.second)

@@ -1,27 +1,30 @@
-import frontend/component
 import frontend/message
 import frontend/model
+import frontend/page/layout
+import frontend/page/song_new
+import frontend/player
 import frontend/route
-import lustre/attribute as attr
 import lustre/element
 import lustre/element/html
-import middle/album
-import middle/song
 
 pub fn view(model: model.Model) -> element.Element(message.Message) {
-  html.div(
-    [
-      attr.class(
-        "w-screen h-screen flex flex-col bg-overlay text-text font-serif gap-2",
-      ),
-    ],
-    [
-      component.header(),
-      html.text(model.route |> route.to_uri |> fn(uri) { uri.path }),
-      component.album(
-        album.Album(id: album.Id(-1), name: "My total cool album"),
-        model,
-      ),
-    ],
-  )
+  let default_view = model.route |> route.to_string |> html.text()
+
+  layout.view([
+    case model.route {
+      route.Album -> default_view
+      route.AlbumEdit(album_id:) -> default_view
+      route.Artist -> default_view
+      route.ArtistEdit(artist_id:) -> default_view
+      route.Home -> default_view
+      route.Music -> default_view
+      route.MusicEdit(song_id:) -> default_view
+      route.NotFound -> default_view
+      route.Queue -> default_view
+      route.Tag -> default_view
+      route.TagEdit(tag_id:) -> default_view
+      route.MusicNew -> song_new.view()
+    },
+    player.view_opt(model.player),
+  ])
 }

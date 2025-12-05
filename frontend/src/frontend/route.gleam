@@ -10,6 +10,7 @@ pub type Route {
   Home
   Music
   MusicEdit(song_id: song.Id)
+  MusicNew
   Album
   AlbumEdit(album_id: album.Id)
   Artist
@@ -40,6 +41,7 @@ pub fn to_string(route: Route) -> String {
     Tag -> "/tag"
     TagEdit(tag_id:) -> "/tag/edit/" <> int.to_string(tag_id.inner)
     NotFound -> "/not_found"
+    MusicNew -> "/song/new"
   }
 }
 
@@ -56,6 +58,7 @@ pub fn from_uri(uri: uri.Uri) -> Route {
     ["song"] -> Music |> Ok
     ["song", "edit", id] ->
       id |> int.parse() |> result.map(song.Id) |> result.map(MusicEdit)
+    ["song", "new"] -> MusicNew |> Ok
     ["queue"] -> Queue |> Ok
     ["tag"] -> Tag |> Ok
     ["tag", "edit", id] ->

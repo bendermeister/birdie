@@ -143,43 +143,6 @@ pub fn query_box(query: query.Query) {
   )
 }
 
-pub fn header() {
-  let header_item = fn(icon, title, route) {
-    html.div(
-      [
-        attr.class(
-          "flex flex-row gap-2 justify-start items-center text-foam font-bold text-lg hover:cursor-pointer",
-        ),
-        event.on_click(message.UserChangeRoute(route)),
-      ],
-      [icon([attr.class("text-iris size-6")]), title |> element.text()],
-    )
-  }
-
-  html.div(
-    [
-      attr.class("w-full h-20 p-5"),
-      attr.class("bg-overlay shadow-lg"),
-      attr.class("flex flex-row justify-between items-center"),
-    ],
-    [
-      birdie_logo(),
-      html.div(
-        [
-          attr.class("w-full"),
-          attr.class("flex flex-row gap-8 justify-end items-center"),
-        ],
-        [
-          header_item(icon.music_note, "music", route.Music),
-          header_item(icon.folder, "album", route.Album),
-          header_item(icon.user, "artist", route.Artist),
-          header_item(icon.tag, "tag", route.Tag),
-        ],
-      ),
-    ],
-  )
-}
-
 pub fn query_part(part: query.Part, attrs: List(attr.Attribute(a))) {
   let #(text, border) =
     case part {

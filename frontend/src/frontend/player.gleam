@@ -1,14 +1,19 @@
 import frontend/audio
 import frontend/icon
+import gleam/list
+import gleam/option
+import gleam/string
 import lustre/attribute as attr
 import lustre/element
 import lustre/element/html
+import middle/artist
 import middle/song
 
 pub type Player {
   Player(
     audio: audio.Audio,
     song: song.Song,
+    artist: List(artist.Artist),
     duration: Int,
     playtime: Int,
     state: State,
@@ -23,6 +28,7 @@ pub type State {
 pub fn new(song: song.Song) -> Player {
   Player(
     audio: audio.new("/api/static/" <> song.file_name),
+    artist: [],
     song:,
     duration: 0,
     playtime: 0,
@@ -38,6 +44,7 @@ pub fn update(player: Player) -> Player {
     duration: audio.duration(player.audio),
     playtime: audio.playtime(player.audio),
     state: player.state,
+    artist: player.artist,
   )
 }
 
@@ -48,7 +55,20 @@ pub fn pause(player: Player) -> Player {
   |> update()
 }
 
-pub fn player() {
+pub fn view_opt(player: option.Option(Player)) {
+  player
+  |> option.map(view)
+  |> option.unwrap(element.none())
+}
+
+pub fn view(player: Player) {
+  let artist =
+    player.artist
+    |> list.map(fn(x) { x.name })
+    |> list.map(string.trim)
+    |> list.filter(fn(x) { !string.is_empty(x) })
+    |> string.join(", ")
+
   html.div(
     [
       attr.class("fixed bottom-0 z-20"),
@@ -74,9 +94,9 @@ pub fn player() {
                 [attr.class("flex flex-col items-start justify-center h-full")],
                 [
                   html.div([attr.class("text-lg")], [
-                    element.text("Rap ueber Hass"),
+                    player.song.name |> html.text,
                   ]),
-                  html.div([attr.class("")], [element.text("K.I.Z")]),
+                  html.div([attr.class("")], [artist |> html.text]),
                 ],
               ),
             ],
